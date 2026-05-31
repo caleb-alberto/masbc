@@ -22,6 +22,10 @@ struct clp_node {
 };
 
 
+bool verify_chain(struct clp_node* chain, int size);
+
+void shuffle(struct clp_node* chain, int size);
+
 int main() {
 
         /* struct timespec start, end;
@@ -45,4 +49,38 @@ int main() {
         free(chain);
 
         return 0;
+}
+
+bool verify_chain(struct clp_node* chain, int size) {
+        bool visited[size];
+        uint32_t current = 0;
+
+        for (int i = 0; i < size; i++) {
+                visited[current] = true;
+                current = chain[current].next;
+        }
+        for (int i = 0; i < size; i++) {
+                if (!visited[i])
+                        return false;
+        }
+
+        return true;
+}
+
+void shuffle(struct clp_node* chain, int size) {
+        int j = 0;
+        int perm[size];
+
+        for (int i = 0; i < size; i++)
+                perm[i] = i;
+
+        for (int i = size - 1; i > 0; i--) {
+                j = rand() % (i + 1);
+                int dum = perm[i];
+                perm[i] = perm[j];
+                perm[j] = dum;
+        }
+
+        for (int i = 0; i < size; i++)
+                chain[perm[i]].next = perm[(i+1) % size];
 }
