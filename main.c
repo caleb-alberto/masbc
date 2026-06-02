@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <assert.h>
 
 
 /*
@@ -24,6 +26,8 @@ struct clp_node {
 
 bool verify_chain(struct clp_node* chain, int size);
 
+bool verify_perm(struct clp_node* chain, int size);
+
 void shuffle(struct clp_node* chain, int size);
 
 int main() {
@@ -40,11 +44,17 @@ int main() {
 
         // printf("time: %lld \n", elapsed_ns);
 
-        struct clp_node *chain = aligned_alloc(64, 13 * sizeof(struct clp_node));
+	int chain_size = 10;
+        struct clp_node *chain = aligned_alloc(64, chain_size * sizeof(struct clp_node));
+	if (chain == NULL) {
+		perror("aligned_alloc");
+		exit(1);
+	}
     
-        printf("sizeof(node) = %zu\n", sizeof(struct clp_node));
-        printf("buffer addr  = %p\n", (void*)chain);
-        printf("addr %% 64   = %lu\n", (unsigned long)chain % 64);
+	shuffle(chain, chain_size);
+
+	assert(verify_perm(chain, chain_size));
+	assert(verify_chain(chain, chain_size));
     
         free(chain);
 
@@ -59,6 +69,20 @@ bool verify_chain(struct clp_node* chain, int size) {
                 visited[current] = true;
                 current = chain[current].next;
         }
+        for (int i = 0; i < size; i++) {
+                if (!visited[i])
+                        return false;
+        }
+
+        return true;
+}
+
+bool verify_perm(struct clp_node* chain, int size) {
+        bool visited[size];
+
+        for (int i = 0; i < size; i++) 
+                visited[chain[i].next] = true;
+
         for (int i = 0; i < size; i++) {
                 if (!visited[i])
                         return false;

@@ -5,3 +5,6 @@ build: main.c
 
 clean: main
 	rm -f main
+
+debug: main.c
+	gcc $(CFLAGS) -g main.c -o main
