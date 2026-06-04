@@ -31,20 +31,7 @@ bool verify_perm(struct clp_node* chain, int size);
 void shuffle(struct clp_node* chain, int size);
 
 int main() {
-
-        /* struct timespec start, end;
-        clock_gettime(CLOCK_MONOTONIC, &start);
-
-
-
-        clock_gettime(CLOCK_MONOTONIC, &end);
-
-        long long elapsed_ns = (end.tv_sec - start.tv_sec) * 1000000000LL
-                               + (end.tv_nsec - start.tv_nsec); */
-
-        // printf("time: %lld \n", elapsed_ns);
-
-	int chain_size = 10;
+	int chain_size = 1000002;
         struct clp_node *chain = aligned_alloc(64, chain_size * sizeof(struct clp_node));
 	if (chain == NULL) {
 		perror("aligned_alloc");
@@ -55,8 +42,33 @@ int main() {
 
 	assert(verify_perm(chain, chain_size));
 	assert(verify_chain(chain, chain_size));
-    
+
+        struct timespec start, end;
+	uint32_t current = 0;
+	uint64_t accumulator = 0;
+	uint64_t HOPS = 1000000;
+
+        clock_gettime(CLOCK_MONOTONIC, &start);
+
+	for (int i = 0; i < HOPS; i++) {
+		current = chain[current].next;
+		accumulator ^= current;
+	}
+
+        clock_gettime(CLOCK_MONOTONIC, &end);
+
+        long long elapsed_ns = (end.tv_sec - start.tv_sec) * 1000000000LL
+                               + (end.tv_nsec - start.tv_nsec);
+
+	printf("RAM time: %lld ns/hop, accumulator: %lu\n", elapsed_ns/HOPS, accumulator);
+
         free(chain);
+
+        /*chain = aligned_alloc(64, chain_size * sizeof(struct clp_node)); if (chain == NULL) {
+		perror("aligned_alloc");
+		exit(1);
+	}
+        free(chain);*/
 
         return 0;
 }
