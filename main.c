@@ -30,45 +30,13 @@ bool verify_perm(struct clp_node* chain, int size);
 
 void shuffle(struct clp_node* chain, int size);
 
+void walk_chain(int chain_size, char* tier);
+
 int main() {
-	int chain_size = 1000002;
-        struct clp_node *chain = aligned_alloc(64, chain_size * sizeof(struct clp_node));
-	if (chain == NULL) {
-		perror("aligned_alloc");
-		exit(1);
-	}
-    
-	shuffle(chain, chain_size);
-
-	assert(verify_perm(chain, chain_size));
-	assert(verify_chain(chain, chain_size));
-
-        struct timespec start, end;
-	uint32_t current = 0;
-	uint64_t accumulator = 0;
-	uint64_t HOPS = 1000000;
-
-        clock_gettime(CLOCK_MONOTONIC, &start);
-
-	for (int i = 0; i < HOPS; i++) {
-		current = chain[current].next;
-		accumulator ^= current;
-	}
-
-        clock_gettime(CLOCK_MONOTONIC, &end);
-
-        long long elapsed_ns = (end.tv_sec - start.tv_sec) * 1000000000LL
-                               + (end.tv_nsec - start.tv_nsec);
-
-	printf("RAM time: %lld ns/hop, accumulator: %lu\n", elapsed_ns/HOPS, accumulator);
-
-        free(chain);
-
-        /*chain = aligned_alloc(64, chain_size * sizeof(struct clp_node)); if (chain == NULL) {
-		perror("aligned_alloc");
-		exit(1);
-	}
-        free(chain);*/
+	walk_chain(1000000, "RAM");
+	walk_chain(200000, "L3");
+	walk_chain(100000, "L2");
+	walk_chain(10000, "L1");
 
         return 0;
 }
@@ -119,4 +87,40 @@ void shuffle(struct clp_node* chain, int size) {
 
         for (int i = 0; i < size; i++)
                 chain[perm[i]].next = perm[(i+1) % size];
+}
+
+void walk_chain(int chain_size, char* tier) {
+        struct clp_node *chain = aligned_alloc(64, chain_size * sizeof(struct clp_node));
+	if (chain == NULL) {
+		perror("aligned_alloc");
+		exit(1);
+	}
+    
+	shuffle(chain, chain_size);
+
+	assert(verify_perm(chain, chain_size));
+	assert(verify_chain(chain, chain_size));
+
+        struct timespec start, end;
+	uint32_t current = 0;
+	uint64_t accumulator = 0;
+	uint64_t HOPS = 1000;
+
+        clock_gettime(CLOCK_MONOTONIC, &start);
+
+	for (int i = 0; i < HOPS; i++) {
+		current = chain[current].next;
+		accumulator ^= current;
+	}
+
+        clock_gettime(CLOCK_MONOTONIC, &end);
+
+        long long elapsed_ns = (end.tv_sec - start.tv_sec) * 1000000000LL
+                               + (end.tv_nsec - start.tv_nsec);
+
+	asm volatile ("" : : "r"(accumulator)); // prevent loop elimination by using 'accumulator'
+	printf("%s\ttime: %4lld ns/hop\tbuffer size: %.1f MB\n", tier, elapsed_ns/HOPS, 
+		(chain_size * sizeof(struct clp_node)) / (1024.0 * 1024.0));
+
+        free(chain);
 }
