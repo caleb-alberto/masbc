@@ -33,10 +33,10 @@ void shuffle(struct clp_node* chain, int size);
 void walk_chain(int chain_size, char* tier);
 
 int main() {
-	walk_chain(1000000, "RAM");
-	walk_chain(200000, "L3");
-	walk_chain(100000, "L2");
-	walk_chain(10000, "L1");
+	walk_chain(1048576, "RAM");
+	walk_chain(262144, "L3");
+	walk_chain(16384, "L2");
+	walk_chain(512, "L1");
 
         return 0;
 }
@@ -60,7 +60,7 @@ bool verify_chain(struct clp_node* chain, int size) {
 bool verify_perm(struct clp_node* chain, int size) {
         bool visited[size];
 
-        for (int i = 0; i < size; i++) 
+        for (int i = 0; i < size; i++)
                 visited[chain[i].next] = true;
 
         for (int i = 0; i < size; i++) {
@@ -95,7 +95,7 @@ void walk_chain(int chain_size, char* tier) {
 		perror("aligned_alloc");
 		exit(1);
 	}
-    
+
 	shuffle(chain, chain_size);
 
 	assert(verify_perm(chain, chain_size));
@@ -119,8 +119,21 @@ void walk_chain(int chain_size, char* tier) {
                                + (end.tv_nsec - start.tv_nsec);
 
 	asm volatile ("" : : "r"(accumulator)); // prevent loop elimination by using 'accumulator'
-	printf("%s\ttime: %4lld ns/hop\tbuffer size: %.1f MB\n", tier, elapsed_ns/HOPS, 
-		(chain_size * sizeof(struct clp_node)) / (1024.0 * 1024.0));
+
+        float buffer_size = (chain_size * sizeof(struct clp_node)) / (1024.0 * 1024.0);
+
+        if (buffer_size < 1) {
+        	printf("%s\ttime: %4lld ns/hop\tbuffer size: %3.0f KB\n",
+                        tier,
+                        elapsed_ns/HOPS,
+                        buffer_size * 1024.0);
+        }
+        else {
+        	printf("%s\ttime: %4lld ns/hop\tbuffer size: %3.0f MB\n",
+                        tier,
+                        elapsed_ns/HOPS,
+                        buffer_size);
+        }
 
         free(chain);
 }
