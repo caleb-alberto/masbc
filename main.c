@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 
 /*
@@ -33,10 +35,24 @@ void shuffle(struct clp_node* chain, int size);
 void walk_chain(int chain_size, char* tier);
 
 int main() {
-	walk_chain(1048576, "RAM");
-	walk_chain(262144, "L3");
-	walk_chain(16384, "L2");
-	walk_chain(512, "L1");
+        walk_chain(512, "L1");
+        walk_chain(16384, "L2");
+        walk_chain(262144, "L3");
+        walk_chain(1048576, "RAM");
+
+        int fd = open("tmp_bench.bin", O_CREAT | O_WRONLY, 0644);
+
+        size_t count = 4096 * 262144;
+        char* buf = (char*)calloc(count, 1);
+        assert(write(fd, buf, count) == count);
+
+
+        assert(close(fd) == 0);
+
+        //fd = open("tmp_bench.bin", O_RDONLY | O_DIRECT);
+        //assert(close(fd) == 0);
+
+        assert(unlink("tmp_bench.bin") == 0);
 
         return 0;
 }
@@ -91,48 +107,48 @@ void shuffle(struct clp_node* chain, int size) {
 
 void walk_chain(int chain_size, char* tier) {
         struct clp_node *chain = aligned_alloc(64, chain_size * sizeof(struct clp_node));
-	if (chain == NULL) {
-		perror("aligned_alloc");
-		exit(1);
-	}
+        if (chain == NULL) {
+                perror("aligned_alloc");
+                exit(1);
+        }
 
-	shuffle(chain, chain_size);
+        shuffle(chain, chain_size);
 
-	assert(verify_perm(chain, chain_size));
-	assert(verify_chain(chain, chain_size));
+        assert(verify_perm(chain, chain_size));
+        assert(verify_chain(chain, chain_size));
 
         struct timespec start, end;
-	uint32_t current = 0;
-	uint64_t accumulator = 0;
-	uint64_t HOPS = 1000;
+        uint32_t current = 0;
+        uint64_t accumulator = 0;
+        uint64_t HOPS = 1000;
 
         clock_gettime(CLOCK_MONOTONIC, &start);
 
-	for (int i = 0; i < HOPS; i++) {
-		current = chain[current].next;
-		accumulator ^= current;
-	}
+        for (int i = 0; i < HOPS; i++) {
+                current = chain[current].next;
+                accumulator ^= current;
+        }
 
         clock_gettime(CLOCK_MONOTONIC, &end);
 
         long long elapsed_ns = (end.tv_sec - start.tv_sec) * 1000000000LL
-                               + (end.tv_nsec - start.tv_nsec);
+                + (end.tv_nsec - start.tv_nsec);
 
-	asm volatile ("" : : "r"(accumulator)); // prevent loop elimination by using 'accumulator'
+        asm volatile ("" : : "r"(accumulator)); // prevent loop elimination by using 'accumulator'
 
         float buffer_size = (chain_size * sizeof(struct clp_node)) / (1024.0 * 1024.0);
 
         if (buffer_size < 1) {
-        	printf("%s\ttime: %4lld ns/hop\tbuffer size: %3.0f KB\n",
-                        tier,
-                        elapsed_ns/HOPS,
-                        buffer_size * 1024.0);
+                printf("%s\ttime: %4lld ns/hop\tbuffer size: %3.0f KB\n",
+                       tier,
+                       elapsed_ns/HOPS,
+                       buffer_size * 1024.0);
         }
         else {
-        	printf("%s\ttime: %4lld ns/hop\tbuffer size: %3.0f MB\n",
-                        tier,
-                        elapsed_ns/HOPS,
-                        buffer_size);
+                printf("%s\ttime: %4lld ns/hop\tbuffer size: %3.0f MB\n",
+                       tier,
+                       elapsed_ns/HOPS,
+                       buffer_size);
         }
 
         free(chain);
