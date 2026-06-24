@@ -70,8 +70,8 @@ int main() {
 		total_time += times[i];
 	long long avg_time = total_time / HOPS;
 	printf("DISK\ttime: %5lld ns/hop\tbuffer size: %3.0f GB\n",
-		avg_time,
-		(double)count / 1073741824);
+               avg_time,
+               (double)count / 1073741824);
 
         assert(close(fd) == 0);
         assert(unlink("tmp_bench.bin") == 0);
