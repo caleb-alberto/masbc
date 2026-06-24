@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <time.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -27,11 +28,8 @@ struct clp_node {
 
 
 bool verify_chain(struct clp_node* chain, int size);
-
 bool verify_perm(struct clp_node* chain, int size);
-
 void shuffle(struct clp_node* chain, int size);
-
 void walk_chain(int chain_size, char* tier);
 
 int main() {
@@ -43,15 +41,39 @@ int main() {
         int fd = open("tmp_bench.bin", O_CREAT | O_WRONLY, 0644);
 
         size_t count = 4096 * 262144;
-        char* buf = (char*)calloc(count, 1);
-        assert(write(fd, buf, count) == count);
-
-
+        char* wbuf = (char*)calloc(count, 1);
+        assert(write(fd, wbuf, count) == count);
         assert(close(fd) == 0);
 
-        //fd = open("tmp_bench.bin", O_RDONLY | O_DIRECT);
-        //assert(close(fd) == 0);
+        fd = open("tmp_bench.bin", O_RDONLY | O_DIRECT);
 
+	int HOPS = 1000;
+	long long times[HOPS];
+	char rbuf[4096];
+        struct timespec start, end;
+
+	for (int i = 0; i < HOPS; i++) {
+		off_t offset = 4096 * (rand() % 262144);
+		assert(lseek(fd, offset, SEEK_SET) != -1);
+
+		clock_gettime(CLOCK_MONOTONIC, &start);
+
+		assert(read(fd, rbuf, 4096) != -1); 
+
+		clock_gettime(CLOCK_MONOTONIC, &end);
+		times[i] = (end.tv_sec - start.tv_sec) * 1000000000LL
+			+ (end.tv_nsec - start.tv_nsec);
+	}
+
+	long long total_time = 0;
+	for (int i = 0; i < HOPS; i++) 
+		total_time += times[i];
+	long long avg_time = total_time / HOPS;
+	printf("DISK\ttime: %6lld ns/hop\tbuffer size: %3.0f GB\n", 
+		avg_time, 
+		(double)count / 1073741824);
+
+        assert(close(fd) == 0);
         assert(unlink("tmp_bench.bin") == 0);
 
         return 0;
@@ -139,13 +161,13 @@ void walk_chain(int chain_size, char* tier) {
         float buffer_size = (chain_size * sizeof(struct clp_node)) / (1024.0 * 1024.0);
 
         if (buffer_size < 1) {
-                printf("%s\ttime: %4lld ns/hop\tbuffer size: %3.0f KB\n",
+                printf("%s\ttime: %6lld ns/hop\tbuffer size: %3.0f KB\n",
                        tier,
                        elapsed_ns/HOPS,
                        buffer_size * 1024.0);
         }
         else {
-                printf("%s\ttime: %4lld ns/hop\tbuffer size: %3.0f MB\n",
+                printf("%s\ttime: %6lld ns/hop\tbuffer size: %3.0f MB\n",
                        tier,
                        elapsed_ns/HOPS,
                        buffer_size);
