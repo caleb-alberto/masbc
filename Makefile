@@ -1,4 +1,4 @@
-CFLAGS = -Wall -O2 -fno-tree-vectorize
+CFLAGS = -Wall -O2
 
 build: main.c
 	gcc $(CFLAGS) main.c -o main

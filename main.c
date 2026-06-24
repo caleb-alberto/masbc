@@ -58,7 +58,7 @@ int main() {
 
 		clock_gettime(CLOCK_MONOTONIC, &start);
 
-		assert(read(fd, rbuf, 4096) != -1); 
+		assert(read(fd, rbuf, 4096) != -1);
 
 		clock_gettime(CLOCK_MONOTONIC, &end);
 		times[i] = (end.tv_sec - start.tv_sec) * 1000000000LL
@@ -66,11 +66,11 @@ int main() {
 	}
 
 	long long total_time = 0;
-	for (int i = 0; i < HOPS; i++) 
+	for (int i = 0; i < HOPS; i++)
 		total_time += times[i];
 	long long avg_time = total_time / HOPS;
-	printf("DISK\ttime: %6lld ns/hop\tbuffer size: %3.0f GB\n", 
-		avg_time, 
+	printf("DISK\ttime: %5lld ns/hop\tbuffer size: %3.0f GB\n",
+		avg_time,
 		(double)count / 1073741824);
 
         assert(close(fd) == 0);
@@ -161,13 +161,13 @@ void walk_chain(int chain_size, char* tier) {
         float buffer_size = (chain_size * sizeof(struct clp_node)) / (1024.0 * 1024.0);
 
         if (buffer_size < 1) {
-                printf("%s\ttime: %6lld ns/hop\tbuffer size: %3.0f KB\n",
+                printf("%s\ttime: %5lld ns/hop\tbuffer size: %3.0f KB\n",
                        tier,
                        elapsed_ns/HOPS,
                        buffer_size * 1024.0);
         }
         else {
-                printf("%s\ttime: %6lld ns/hop\tbuffer size: %3.0f MB\n",
+                printf("%s\ttime: %5lld ns/hop\tbuffer size: %3.0f MB\n",
                        tier,
                        elapsed_ns/HOPS,
                        buffer_size);
